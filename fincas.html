@@ -112,9 +112,9 @@
 
 <script>
   // ==========================================
-  // PEGA AQUÍ EL ENLACE DE TU GOOGLE SHEETS PUBLICADO EN FORMATO CSV
+  // PEGA AQUÍ EL ENLACE DE TU GOOGLE SHEETS PUBLICADO (.csv)
   // ==========================================
-  const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/1RMirTuxidZs_ckVnFc3cN1tpX2aj1ld-MKnLsHCIygQ/edit?usp=sharing/pub?gid=0&single=true&output=csv";
+  const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/1RMirTuxidZs_ckVnFc3cN1tpX2aj1ld-MKnLsHCIygQ/edit?usp=sharingI/pub?gid=0&single=true&output=csv";
 
   $(document).ready(function() {
     
@@ -122,30 +122,29 @@
     $('#supplier').select2({ placeholder: "Escriba para buscar exportadora..." });
     $('#farm').select2({ placeholder: "Escriba para buscar finca..." });
 
-    // Cargar datos en tiempo real desde Google Sheets
+    // Leer el Excel desde Drive
     Papa.parse(GOOGLE_SHEETS_CSV_URL, {
       download: true,
-      header: true, // Asume que la primera fila tiene los títulos (EXPORTADORA, FINCA, ORCHARD CODE)
+      header: true,
       complete: function(results) {
         
-        // Ocultar mensaje de carga
         $('#loading').hide();
         $('#supplier').prop('disabled', false);
         $('#supplier').empty().append(new Option("Seleccione una exportadora...", ""));
 
         const data = results.data;
         
-        // 1. Filtrar fincas que sí tengan Orchard Code (asegurando que exista la columna)
+        // 1. Filtrar las filas que tengan un Orchard Code válido
         const fincasValidas = data.filter(item => item["ORCHARD CODE"] && item["ORCHARD CODE"].trim() !== "");
 
-        // 2. Extraer Exportadoras únicas
-        const exportadorasUnicas = [...new Set(fincasValidas.map(item => item["EXPORTADORA"]))].filter(Boolean).sort();
+        // 2. Extraer Exportadoras (SUPPLIER) únicas
+        const exportadorasUnicas = [...new Set(fincasValidas.map(item => item["SUPPLIER"]))].filter(Boolean).sort();
         
         exportadorasUnicas.forEach(exp => {
           $('#supplier').append(new Option(exp, exp));
         });
 
-        // 3. Lógica al cambiar de Exportadora
+        // 3. Cuando seleccionan un Supplier
         $('#supplier').on('change', function() {
           const exportadoraSeleccionada = $(this).val();
           const $farmSelect = $('#farm');
@@ -156,13 +155,15 @@
           if (exportadoraSeleccionada) {
             $farmSelect.prop('disabled', false);
 
-            const fincasFiltradas = fincasValidas.filter(item => item["EXPORTADORA"] === exportadoraSeleccionada);
+            // Filtrar fincas por el Supplier seleccionado
+            const fincasFiltradas = fincasValidas.filter(item => item["SUPPLIER"] === exportadoraSeleccionada);
 
             fincasFiltradas.forEach(fincaObj => {
-              // Limpiar nombre: "LA PONDEROSA - DUREXPORTA" -> "LA PONDEROSA"
-              let nombreLimpio = fincaObj["FINCA"] ? fincaObj["FINCA"].split(" - ")[0].trim() : "";
+              // Limpiar nombre: "AGRIPEPASA 4 - ANDRADE COMEX" -> "AGRIPEPASA 4"
+              let nombreLimpio = fincaObj["FARMS AND SUPPLIER"] ? fincaObj["FARMS AND SUPPLIER"].split(" - ")[0].trim() : "";
               
               if(nombreLimpio) {
+                // Se agrega la finca al selector; el valor interno será el ORCHARD CODE
                 $farmSelect.append(new Option(nombreLimpio, fincaObj["ORCHARD CODE"]));
               }
             });
@@ -171,7 +172,7 @@
           }
         });
 
-        // 4. Lógica al cambiar de Finca
+        // 4. Cuando seleccionan una Finca
         $('#farm').on('change', function() {
           const orchardCode = $(this).val();
           if (orchardCode) {
