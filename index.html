@@ -12,6 +12,7 @@
       color: #333;
       padding: 20px;
       box-sizing: border-box;
+      background-color: #f9f9f9;
     }
 
     .container {
@@ -37,6 +38,11 @@
       text-align: center;
       color: #ed1922;
       margin-bottom: 30px;
+      margin-top: 30px;
+    }
+    
+    .section h2:first-child {
+      margin-top: 0;
     }
 
     .form-link, .view-button {
@@ -49,11 +55,12 @@
       font-size: 1.1rem;
       text-align: center;
       margin-bottom: 20px;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.3s ease, transform 0.2s ease;
     }
 
     .form-link:hover, .view-button:hover {
       background-color: #c2161b;
+      transform: translateY(-2px);
     }
 
     /* --- ESTILO PARA EL BOTÓN VERDE DE ASISTENCIA --- */
@@ -66,11 +73,32 @@
       background-color: #00803a;
     }
 
+    /* --- ESTILOS PARA LA SECCIÓN DE REPORTES --- */
+    .btn-upload {
+      background-color: #005A9C; /* Azul */
+      font-weight: bold;
+    }
+    .btn-upload:hover { background-color: #003f6e; }
+
+    .btn-edit {
+      background-color: #fbbc05; /* Amarillo */
+      color: #333;
+      font-weight: bold;
+    }
+    .btn-edit:hover { background-color: #e0a800; color: #111; }
+
     .logo {
       display: block;
       margin: -40px auto;
       width: 250px;
       height: auto;
+    }
+
+    hr.divider {
+      border: 0;
+      height: 1px;
+      background: #ddd;
+      margin: 30px 0;
     }
 
     @media (max-width: 800px) {
@@ -94,14 +122,31 @@
     <a class="form-link" href="bananaindex.html">BANANA</a>
     <a class="form-link" href="babybananaindex.html">BABY BANANA</a>
     
+    <hr class="divider">
+
     <h2>ASISTENCIA / RRHH</h2>
     <a class="view-button btn-asistencia" href="asistencia.html">
       🔍 CONSULTAR DÍAS LIBRES
     </a>
 
+    <hr class="divider">
+
     <h2>INFORMATION/LOCATION</h2>
     <a class="form-link" href="infoFarms.html">FARMS INFORMATION</a>
     <a class="form-link" href="fincas.html">BUSCADOR DE ORCHARD CODES</a>
+
+    <hr class="divider">
+
+    <h2>REPORTES</h2>
+    
+    <a class="form-link btn-upload" href="https://docs.google.com/forms/d/e/TU_LINK_DEL_FORMULARIO_AQUI/viewform" target="_blank">
+      ⬆️ SUBIR NUEVO REPORTE
+    </a>
+
+    <a class="view-button btn-edit" href="reportes.html">
+      🗂️ BUSCAR REPORTES CLASIFICADOS
+    </a>
+
   </div>
 </div>
 
