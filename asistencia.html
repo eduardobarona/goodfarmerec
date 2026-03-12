@@ -107,7 +107,7 @@
 <body>
 
   <div class="header">
-    <a href="bananaindex.html" class="return-button">← RETURN</a>
+    <a href="index.html" class="return-button">← RETURN</a>
     <img src="logo.png" alt="GoodFarmer Logo" class="logo" />
   </div>
 
@@ -142,42 +142,64 @@
 
     function procesarCSV(csvText) {
       const lineas = csvText.split('\n');
-      const filas = lineas.map(linea => linea.split(','));
+      
+      // Parsear las comas respetando posibles textos entre comillas
+      const filas = lineas.map(linea => {
+        const matches = linea.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || linea.split(',');
+        return matches.map(m => m.replace(/^"|"$/g, '').trim());
+      });
 
       let splitIdx = filas.length;
+      let startIndex = 0;
+
+      // Buscar dónde empieza la tabla y dónde se divide
       for (let i = 0; i < filas.length; i++) {
-        const col0 = filas[i][0] ? filas[i][0].replace(/['"]/g, '').trim().toUpperCase() : "";
+        const col0 = filas[i][0] ? filas[i][0].toUpperCase() : "";
+        
+        if (col0 === "SEMANA" || col0 === "FECHAS") {
+           startIndex = i; // Encontramos el inicio real de datos
+        }
         if (col0 === "NAME" || col0 === "NOMBRE") {
-          splitIdx = i;
+          splitIdx = i; // Encontramos la divisón inferior
         }
       }
 
+      // 1. Extraer los días disponibles (mitad inferior)
       const availableDays = {};
       for (let i = splitIdx + 1; i < filas.length; i++) {
-        const nombre = filas[i][0] ? filas[i][0].replace(/['"]/g, '').trim().toUpperCase() : "";
-        const diasStr = filas[i][1] ? filas[i][1].replace(/['"]/g, '').trim() : "0";
-        if (nombre) {
+        const nombre = filas[i][0] ? filas[i][0].toUpperCase() : "";
+        const diasStr = filas[i][1] ? filas[i][1] : "0";
+        if (nombre && nombre !== "") {
           availableDays[nombre] = parseInt(diasStr) || 0;
         }
       }
 
-      for (let i = 0; i < splitIdx; i++) {
-        const nombre = filas[i][0] ? filas[i][0].replace(/['"]/g, '').trim().toUpperCase() : "";
-        if (!nombre || ["NAME", "NOMBRE", "SEMANA", "FECHAS"].includes(nombre)) continue;
+      // 2. Extraer los historiales (mitad superior)
+      for (let i = startIndex + 1; i < splitIdx; i++) {
+        const nombre = filas[i][0] ? filas[i][0].toUpperCase() : "";
+        
+        // Ignorar filas vacías o de encabezados
+        if (!nombre || ["NAME", "NOMBRE", "SEMANA", "FECHAS", "FIN DE SEMANA/FERIADO TRABAJADO"].includes(nombre)) continue;
 
         const libres = [];
-        for (let j = 2; j < filas[i].length; j++) {
-          const val = filas[i][j] ? filas[i][j].replace(/['"]/g, '').trim() : "";
-          if (val.toUpperCase().startsWith("LIBRE")) {
-            libres.push(val);
+        // Revisar todas las celdas a la derecha del nombre
+        for (let j = 1; j < filas[i].length; j++) {
+          const val = filas[i][j] ? filas[i][j].toUpperCase() : "";
+          if (val.startsWith("LIBRE") || val.startsWith("PERMISO")) {
+            // Guardar solo el texto, ignorar los "-1" que estén sueltos
+            libres.push(filas[i][j]); 
           }
         }
 
-        techData[nombre] = {
-          dias_disponibles: availableDays[nombre] || 0,
-          dias_libres: libres
-        };
+        // Solo guardamos a la persona si existe en la tabla de abajo (tiene días asignados)
+        if (availableDays.hasOwnProperty(nombre)) {
+            techData[nombre] = {
+              dias_disponibles: availableDays[nombre] || 0,
+              dias_libres: libres
+            };
+        }
       }
+      
       return techData;
     }
 
@@ -186,6 +208,10 @@
       .then(csvText => {
         const dataProcesada = procesarCSV(csvText);
         const datalist = document.getElementById('tech-list');
+        
+        // Limpiar opciones previas si las hay
+        datalist.innerHTML = '';
+        
         for (const name in dataProcesada) {
           const option = document.createElement('option');
           option.value = name;
@@ -195,6 +221,8 @@
         const input = document.getElementById('tech-search');
         input.placeholder = "Selecciona o escribe tu nombre...";
         input.disabled = false;
+        
+        console.log("Datos cargados correctamente:", dataProcesada);
       })
       .catch(error => {
         console.error('Error al cargar el CSV:', error);
