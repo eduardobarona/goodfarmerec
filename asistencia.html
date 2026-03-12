@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <title>GOODFARMER - Asistencia Técnicos</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: #f9f9f9;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      padding: 10px;
+    }
+    .return-button {
+      font-size: 20px;
+      padding: 10px 20px;
+      background-color: #ed1922;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      position: absolute;
+      left: 10px;
+      text-decoration: none;
+    }
+    .return-button:hover { background-color: #c2161b; }
+    .logo { width: 250px; height: auto; }
+    
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+    h1 { color: #ed1922; }
+    
+    .search-box {
+      margin: 20px 0;
+      position: relative;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.1rem;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      box-sizing: border-box;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: #ed1922; }
+    
+    .results-card {
+      display: none;
+      margin-top: 30px;
+      text-align: left;
+      padding: 20px;
+      border-radius: 10px;
+      background-color: #f1f1f1;
+    }
+    .days-badge {
+      display: inline-block;
+      padding: 10px 15px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .positive { background-color: #00B050; }
+    .negative { background-color: #FF0000; }
+    .neutral { background-color: #888; }
+    
+    ul.libre-list {
+      list-style-type: none;
+      padding: 0;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    ul.libre-list li {
+      background: #fff;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border-left: 5px solid #ffc000;
+    }
+    @media (max-width: 800px) {
+      .return-button { position: static; margin-bottom: 20px; }
+      .header { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <a href="bananaindex.html" class="return-button">← RETURN</a>
+    <img src="logo.png" alt="GoodFarmer Logo" class="logo" />
+  </div>
+
+  <div class="container">
+    <h1>CONSULTA DE DÍAS LIBRES</h1>
+    <p>Escribe tu nombre para consultar cuántos días tienes a favor o en contra:</p>
+    
+    <div class="search-box">
+      <input type="text" id="tech-search" list="tech-list" placeholder="Selecciona o escribe tu nombre..." autocomplete="off">
+      <datalist id="tech-list"></datalist>
+    </div>
+
+    <div id="results" class="results-card">
+      <h2 id="tech-name" style="margin-top: 0;"></h2>
+      <div><strong>Estado Actual (Días):</strong> <br>
+        <span id="tech-days" class="days-badge"></span>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <strong>Detalle de días libres descontados:</strong>
+        <ul id="tech-history" class="libre-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let techData = {};
+
+    // 1. Cargar el JSON desde Vercel
+    fetch('datos_tecnicos.json')
+      .then(response => response.json())
+      .then(data => {
+        techData = data;
+        const datalist = document.getElementById('tech-list');
+        // Llenar las opciones del buscador al cargar la página
+        for (const name in techData) {
+          const option = document.createElement('option');
+          option.value = name;
+          datalist.appendChild(option);
+        }
+      })
+      .catch(error => {
+        console.error('Error al cargar datos:', error);
+      });
+
+    // 2. Mostrar datos al seleccionar un nombre
+    document.getElementById('tech-search').addEventListener('input', function(e) {
+      const selectedName = e.target.value.trim().toUpperCase();
+      const resultsDiv = document.getElementById('results');
+      
+      if (techData[selectedName]) {
+        const info = techData[selectedName];
+        
+        document.getElementById('tech-name').textContent = selectedName;
+        
+        // Poner color al número según si debe o tiene a favor
+        const badge = document.getElementById('tech-days');
+        badge.textContent = info.dias_disponibles;
+        badge.className = 'days-badge'; // reset
+        if (info.dias_disponibles > 0) badge.classList.add('positive');
+        else if (info.dias_disponibles < 0) badge.classList.add('negative');
+        else badge.classList.add('neutral');
+
+        // Llenar la lista de días
+        const historyList = document.getElementById('tech-history');
+        historyList.innerHTML = '';
+        
+        if (info.dias_libres.length > 0) {
+          info.dias_libres.forEach(dia => {
+            const li = document.createElement('li');
+            li.textContent = dia;
+            historyList.appendChild(li);
+          });
+        } else {
+          const li = document.createElement('li');
+          li.textContent = "✅ No hay registro de días adeudados o faltas.";
+          li.style.borderLeftColor = "#00B050";
+          historyList.appendChild(li);
+        }
+
+        resultsDiv.style.display = 'block';
+      } else {
+        resultsDiv.style.display = 'none'; // Ocultar si el nombre está incompleto
+      }
+    });
+  </script>
+</body>
+</html>
