@@ -113,7 +113,7 @@
 
   <div class="container">
     <h1>CONSULTA DE DÍAS LIBRES</h1>
-    <p>Escribe tu nombre para consultar cuántos días tienes a favor o en contra:</p>
+    <p>Escribe tu nombre o apellido para consultar tu asistencia:</p>
     
     <div class="search-box">
       <input type="text" id="tech-search" list="tech-list" placeholder="Cargando datos..." autocomplete="off" disabled>
@@ -121,13 +121,13 @@
     </div>
 
     <div id="results" class="results-card">
-      <h2 id="tech-name" style="margin-top: 0;"></h2>
+      <h2 id="tech-name" style="margin-top: 0; border-bottom: 2px solid #ddd; padding-bottom: 10px;"></h2>
       <div><strong>Estado Actual (Días):</strong> <br>
         <span id="tech-days" class="days-badge"></span>
       </div>
       
       <div style="margin-top: 20px;">
-        <strong>Detalle de días libres descontados:</strong>
+        <strong>Días faltados (Pendientes):</strong>
         <ul id="tech-history" class="libre-list"></ul>
       </div>
     </div>
@@ -140,44 +140,48 @@
 
     let techData = {};
 
+    // Analizador de CSV robusto (ignora comas dentro de comillas y saltos de línea invisibles)
     function procesarCSV(csvText) {
       const lineas = csvText.split('\n');
-      
-      // Separar por comas directamente para no perder el orden de columnas vacías
       const filas = lineas.map(linea => {
-        let cols = linea.split(',');
-        return cols.map(c => c.replace(/^"|"$/g, '').trim());
+          let ret = [];
+          let inQuote = false;
+          let val = '';
+          for (let i = 0; i < linea.length; i++) {
+              let char = linea[i];
+              if (char === '"') {
+                  inQuote = !inQuote;
+              } else if (char === ',' && !inQuote) {
+                  ret.push(val.trim());
+                  val = '';
+              } else {
+                  val += char;
+              }
+          }
+          ret.push(val.trim());
+          return ret.map(c => c.replace(/\r$/, '')); // Limpiar retornos de carro
       });
 
       let splitIdx = filas.length;
-      let startIndex = 0;
       let nameColIdx = -1;
 
-      // Buscar dinámicamente dónde empieza y en qué columna están los nombres
+      // Buscar dónde está la palabra "NAME" para saber en qué columna buscar y dónde se divide la tabla
       for (let i = 0; i < filas.length; i++) {
-        for (let j = 0; j < filas[i].length; j++) {
+        for (let j = 0; j < Math.min(10, filas[i].length); j++) {
             const val = filas[i][j] ? filas[i][j].toUpperCase() : "";
-            
-            if (val === "SEMANA" || val === "FECHAS") {
-               startIndex = i;
-               if (nameColIdx === -1) nameColIdx = j;
-            }
             if (val === "NAME" || val === "NOMBRE") {
               splitIdx = i;
-              if (nameColIdx === -1) nameColIdx = j;
+              nameColIdx = j;
             }
         }
       }
 
-      // Si por alguna razón no encuentra los encabezados, asume la columna 0
-      if (nameColIdx === -1) nameColIdx = 0;
+      if (nameColIdx === -1) nameColIdx = 1; // Si no lo encuentra, por defecto es la columna B (índice 1)
 
-      // 1. Extraer los días disponibles (mitad inferior)
+      // 1. Extraer los días disponibles (de la tabla inferior)
       const availableDays = {};
       for (let i = splitIdx + 1; i < filas.length; i++) {
-        // Ignorar si la fila no tiene suficientes columnas
         if (filas[i].length <= nameColIdx + 1) continue;
-
         const nombre = filas[i][nameColIdx] ? filas[i][nameColIdx].toUpperCase() : "";
         const diasStr = filas[i][nameColIdx + 1] ? filas[i][nameColIdx + 1] : "0";
         
@@ -186,27 +190,43 @@
         }
       }
 
-      // 2. Extraer los historiales (mitad superior)
-      for (let i = startIndex + 1; i < splitIdx; i++) {
+      // 2. Identificar dónde termina la tabla azul (Buscamos la última fecha en la fila "FECHAS")
+      let lastDateCol = -1;
+      for (let i = 0; i < splitIdx; i++) {
+          if (filas[i].some(c => c && (c.toUpperCase().includes("FECHAS") || c.toUpperCase().includes("FECHA")))) {
+              for (let j = filas[i].length - 1; j >= 0; j--) {
+                  if (filas[i][j] && filas[i][j] !== "") {
+                      lastDateCol = j;
+                      break;
+                  }
+              }
+              break;
+          }
+      }
+
+      // 3. Extraer SOLO las faltas pendientes (A la derecha de la tabla azul)
+      for (let i = 0; i < splitIdx; i++) {
         const nombre = filas[i][nameColIdx] ? filas[i][nameColIdx].toUpperCase() : "";
         
-        // Ignorar filas vacías o encabezados que se hayan colado
+        // Ignorar encabezados o filas vacías
         if (!nombre || ["NAME", "NOMBRE", "SEMANA", "FECHAS", "FIN DE SEMANA/FERIADO TRABAJADO"].includes(nombre)) continue;
 
         const libres = [];
-        // Revisar todas las celdas a la derecha del nombre
-        for (let j = nameColIdx + 1; j < filas[i].length; j++) {
-          const val = filas[i][j] ? filas[i][j].toUpperCase() : "";
-          // Extraer solo si la celda dice LIBRE o PERMISO
-          if (val.startsWith("LIBRE") || val.startsWith("PERMISO")) {
-            libres.push(filas[i][j]); 
-          }
+        
+        // Empezamos a buscar estrictamente después de que termina la tabla azul
+        if (lastDateCol !== -1) {
+            for (let j = lastDateCol + 1; j < filas[i].length; j++) {
+              const val = filas[i][j] ? filas[i][j].toUpperCase() : "";
+              if (val.startsWith("LIBRE") || val.startsWith("PERMISO")) {
+                libres.push(val); 
+              }
+            }
         }
 
-        // Solo guardamos en la base de datos a los técnicos de la tabla
+        // Si la persona existe en el recuento, la guardamos
         if (availableDays.hasOwnProperty(nombre)) {
             techData[nombre] = {
-              dias_disponibles: availableDays[nombre] || 0,
+              dias_disponibles: availableDays[nombre],
               dias_libres: libres
             };
         }
@@ -215,6 +235,7 @@
       return techData;
     }
 
+    // Descargar y procesar datos
     fetch(CSV_URL)
       .then(response => response.text())
       .then(csvText => {
@@ -238,13 +259,34 @@
         document.getElementById('tech-search').placeholder = "Error al cargar los datos.";
       });
 
+    // Detectar búsqueda (Inteligente)
     document.getElementById('tech-search').addEventListener('input', function(e) {
-      const selectedName = e.target.value.trim().toUpperCase();
+      const typedText = e.target.value.trim().toUpperCase();
       const resultsDiv = document.getElementById('results');
       
-      if (techData[selectedName]) {
-        const info = techData[selectedName];
-        document.getElementById('tech-name').textContent = selectedName;
+      if (!typedText) {
+          resultsDiv.style.display = 'none';
+          return;
+      }
+
+      // Buscar el nombre que contenga lo que el usuario escribió (Ej. Si escribe "RIZO", encuentra "DARWIN RIZO")
+      let matchedName = null;
+      if (techData[typedText]) {
+          matchedName = typedText;
+      } else {
+          for (const fullName in techData) {
+              if (fullName.includes(typedText)) {
+                  matchedName = fullName;
+                  break;
+              }
+          }
+      }
+      
+      if (matchedName) {
+        const info = techData[matchedName];
+        
+        // ¡Aquí mostramos el Nombre COMPLETO siempre!
+        document.getElementById('tech-name').textContent = matchedName; 
         
         const badge = document.getElementById('tech-days');
         badge.textContent = info.dias_disponibles;
@@ -264,7 +306,7 @@
           });
         } else {
           const li = document.createElement('li');
-          li.textContent = "✅ No hay registro de días adeudados o faltas.";
+          li.textContent = "✅ No hay días pendientes por recuperar.";
           li.style.borderLeftColor = "#00B050";
           historyList.appendChild(li);
         }
