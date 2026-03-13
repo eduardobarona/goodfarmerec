@@ -20,7 +20,7 @@
     .filters { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; align-items: flex-end;}
     .filter-group { display: flex; flex-direction: column; }
     .filter-group label { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; color: #2c3e50;}
-    .filter-group input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; width: 160px;}
+    .filter-group input, .filter-group select { padding: 10px; border-radius: 5px; border: 1px solid #ccc; width: 160px; font-size: 14px;}
     
     .btn-search {
       background-color: #005A9C; color: white; border: none; padding: 11px 25px; 
@@ -92,7 +92,8 @@
     </div>
     <div class="filter-group">
       <label>Semana (WEEK):</label>
-      <input type="number" id="filter-week" placeholder="Ej: 11">
+      <select id="filter-week">
+        </select>
     </div>
     <div class="filter-group">
       <label>Año (YEAR):</label>
@@ -152,7 +153,7 @@
 
   <script>
     // =========================================================
-    // 0. AUTOCOMPLETAR FECHA, SEMANA Y AÑO ACTUAL POR DEFECTO
+    // 0. AUTOCOMPLETAR FECHA, SEMANA (LISTA) Y AÑO ACTUAL POR DEFECTO
     // =========================================================
     document.addEventListener("DOMContentLoaded", function () {
       const hoy = new Date();
@@ -173,12 +174,34 @@
       const semanaActual = obtenerSemanaISO(hoy);
 
       const inputDate = document.getElementById("filter-date");
-      const inputWeek = document.getElementById("filter-week");
+      const selectWeek = document.getElementById("filter-week");
       const inputYear = document.getElementById("filter-year");
 
       if (inputDate && !inputDate.value) inputDate.value = fechaActual;
-      if (inputWeek && !inputWeek.value) inputWeek.value = semanaActual;
       if (inputYear && !inputYear.value) inputYear.value = year;
+
+      // 🚀 NUEVO: Generar las últimas 6 semanas dinámicamente (actual + 5 anteriores)
+      if (selectWeek) {
+        selectWeek.innerHTML = ""; // Limpiar antes de llenar
+
+        // Opción por si alguien quiere buscar sin importar la semana
+        selectWeek.appendChild(new Option("Todas las semanas", "")); 
+
+        for (let i = 0; i <= 5; i++) {
+          let sem = semanaActual - i;
+          
+          // Si estamos a inicio de año y la semana se vuelve 0 o negativa, volvemos a la semana 52
+          if (sem <= 0) {
+            sem = 52 + sem; 
+          }
+          
+          let option = new Option(`Semana ${sem}`, sem);
+          if (i === 0) {
+            option.selected = true; // Por defecto, se selecciona la semana actual
+          }
+          selectWeek.appendChild(option);
+        }
+      }
     });
 
     // =========================================================
@@ -233,7 +256,6 @@
       currentData.forEach((row, index) => {
         const tr = document.createElement('tr');
         
-        // 🚀 NUEVO: Muestra las dos columnas de técnicos separadas y legibles
         tr.innerHTML = `
           <td><button class="btn-edit" onclick="openModal(${index})">📝 Editar</button></td>
           <td>${row['DATE'] || ''}</td>
@@ -258,7 +280,6 @@
       priorityContainer.innerHTML = '';
       standardContainer.innerHTML = '';
 
-      // 🚀 NUEVO: Ponemos "Otro tecnico" arriba de todo para que sea fácil de editar
       const priorityKeys = ["TECHNICIAN'S NAME", "Otro tecnico", "FARM CODE", "ORCHARD CODE", "FIX FARM"];
       
       priorityKeys.forEach(key => {
