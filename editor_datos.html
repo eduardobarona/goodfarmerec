@@ -17,7 +17,6 @@
       max-width: 1200px; margin: 0 auto 20px auto; background: white;
       padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    /* Nuevo estilo para acomodar los rangos */
     .filters { display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; align-items: flex-end;}
     .filter-group { display: flex; flex-direction: column; }
     .filter-group label { font-weight: bold; font-size: 0.85rem; margin-bottom: 5px; color: #2c3e50;}
@@ -225,6 +224,9 @@
 
       // 🚀 SE LLAMA A LA FUNCIÓN QUE TRAE LOS NOMBRES DESDE GOOGLE SHEETS
       loadOtherTechs();
+
+      // 🚀 NUEVO EVENTO: RECARGAR TÉCNICOS SI EL USUARIO CAMBIA EL AÑO
+      document.getElementById("filter-year").addEventListener("change", loadOtherTechs);
     });
 
     // =========================================================
@@ -234,8 +236,9 @@
     
     // 🚀 FUNCIÓN QUE LLAMA AL APPS SCRIPT PARA OBTENER NOMBRES ÚNICOS
     async function loadOtherTechs() {
+      const yearVal = document.getElementById("filter-year").value.trim();
       try {
-        const response = await fetch(API_URL + "?action=getOtherTechs");
+        const response = await fetch(API_URL + "?action=getOtherTechs&year=" + encodeURIComponent(yearVal));
         const techs = await response.json();
         
         const dataList = document.getElementById("list_other_technicians");
