@@ -225,7 +225,7 @@
       }
     }
 
-    function renderTable() {
+function renderTable() {
       const tbody = document.getElementById('data-body');
       tbody.innerHTML = '';
 
@@ -236,11 +236,23 @@
 
       currentData.forEach((row, index) => {
         const tr = document.createElement('tr');
+        
+        // 🚀 NUEVO: Lógica para decidir qué técnico mostrar
+        let nombrePrincipal = row["TECHNICIAN'S NAME"] || '';
+        let nombreOtro = row["Otro tecnico"] || '';
+        let displayTecnico = nombrePrincipal;
+
+        if (nombreOtro && !nombrePrincipal) {
+            displayTecnico = nombreOtro; // Muestra solo el otro si no hay principal
+        } else if (nombreOtro && nombrePrincipal) {
+            displayTecnico = `${nombrePrincipal} (${nombreOtro})`; // Muestra ambos si por error llenaron los dos
+        }
+
         tr.innerHTML = `
           <td><button class="btn-edit" onclick="openModal(${index})">📝 Editar</button></td>
           <td>${row['DATE'] || ''}</td>
           <td>${row['WEEK'] || ''}</td>
-          <td><b>${row["TECHNICIAN'S NAME"] || ''}</b></td>
+          <td><b>${displayTecnico}</b></td>
           <td>${row['FARM CODE'] || ''}</td>
           <td>${row['ORCHARD CODE'] || ''}</td>
           <td>${row['FARM'] || ''}</td>
