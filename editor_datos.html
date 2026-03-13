@@ -17,6 +17,7 @@
       max-width: 1200px; margin: 0 auto 20px auto; background: white;
       padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+    /* Nuevo estilo para acomodar los rangos */
     .filters { display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; align-items: flex-end;}
     .filter-group { display: flex; flex-direction: column; }
     .filter-group label { font-weight: bold; font-size: 0.85rem; margin-bottom: 5px; color: #2c3e50;}
@@ -222,12 +223,12 @@
 
       document.getElementById("filter-year").value = year;
 
-      // 🚀 CARGAR LA LISTA DE OTROS TÉCNICOS AL ENTRAR A LA PÁGINA
+      // 🚀 SE LLAMA A LA FUNCIÓN QUE TRAE LOS NOMBRES DESDE GOOGLE SHEETS
       loadOtherTechs();
     });
 
     // =========================================================
-    // Pega tu URL de Apps Script aquí
+    // URL DE APPS SCRIPT
     // =========================================================
     const API_URL = "https://script.google.com/macros/s/AKfycbzXhPX7HyQJvnhvoJvQPglVhorLo9uto6SsVUobwCMXJNMcL7fWdcqWA3y2o8Or-_TW/exec"; 
     
@@ -238,7 +239,7 @@
         const techs = await response.json();
         
         const dataList = document.getElementById("list_other_technicians");
-        dataList.innerHTML = ""; // Limpiar por si acaso
+        dataList.innerHTML = ""; 
         
         techs.forEach(t => {
           let option = document.createElement("option");
@@ -338,7 +339,7 @@
       priorityKeys.forEach(key => {
         let listAttribute = "";
         if (key === "TECHNICIAN'S NAME") listAttribute = 'list="list_technicians"';
-        // 🚀 AQUÍ SE PONE LA LISTA DINÁMICA AL ABRIR EL MODAL DE EDICIÓN
+        // 🚀 AQUÍ SE ASIGNA LA LISTA A "OTRO TECNICO" DENTRO DEL MODAL
         else if (key === "Otro tecnico") listAttribute = 'list="list_other_technicians"';
 
         priorityContainer.innerHTML += `
@@ -399,7 +400,7 @@
            alert("¡Actualizado exitosamente en el Excel!");
            closeModal();
            fetchData(); 
-           // 🚀 Recargar la lista por si se agregó un técnico nuevo
+           // 🚀 Recargar la lista por si se guardó un técnico nuevo
            loadOtherTechs();
         } else {
            alert("Error al guardar: " + result.error);
