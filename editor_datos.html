@@ -110,14 +110,15 @@
           <th>Acción</th>
           <th>DATE</th>
           <th>WEEK</th>
-          <th>TÉCNICO</th>
+          <th>TÉCNICO PRINCIPAL</th>
+          <th>OTRO TÉCNICO</th>
           <th>FARM CODE</th>
           <th>ORCHARD CODE</th>
           <th>FARM</th>
         </tr>
       </thead>
       <tbody id="data-body">
-        <tr><td colspan='7' style="text-align:center;">Usa los filtros de arriba para buscar información.</td></tr>
+        <tr><td colspan='8' style="text-align:center;">Usa los filtros de arriba para buscar información.</td></tr>
       </tbody>
     </table>
     <div id="loading" style="display:none;">🔄 Conectando con la base de datos...</div>
@@ -159,12 +160,8 @@
       const month = String(hoy.getMonth() + 1).padStart(2, '0');
       const day = String(hoy.getDate()).padStart(2, '0');
       
-      // Formato YYYY-MM-DD (que es el que se usa en tu formulario type="date")
-      // Si notas que el botón de buscar no arroja resultados con este formato, 
-      // y en tu Excel la fecha aparece como MM/DD/YYYY, puedes cambiar esto a: `${month}/${day}/${year}`
       const fechaActual = `${year}-${month}-${day}`;
 
-      // Función para calcular la semana ISO
       function obtenerSemanaISO(d) {
         const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         const dayNum = date.getUTCDay() || 7;
@@ -175,7 +172,6 @@
 
       const semanaActual = obtenerSemanaISO(hoy);
 
-      // Inyectar en los campos solo si están vacíos
       const inputDate = document.getElementById("filter-date");
       const inputWeek = document.getElementById("filter-week");
       const inputYear = document.getElementById("filter-year");
@@ -186,7 +182,7 @@
     });
 
     // =========================================================
-    // URL DEL NUEVO SCRIPT DESPLEGADO
+    // RECUERDA PONER LA URL DE TU "NUEVA IMPLEMENTACIÓN" AQUÍ ABAJO 👇
     // =========================================================
     const API_URL = "https://script.google.com/macros/s/AKfycbzXhPX7HyQJvnhvoJvQPglVhorLo9uto6SsVUobwCMXJNMcL7fWdcqWA3y2o8Or-_TW/exec"; 
     
@@ -220,39 +216,30 @@
         renderTable();
       } catch (error) {
         loading.style.display = "none";
-        tbody.innerHTML = "<tr><td colspan='7' style='color:red;'>Error de conexión. Revisa la consola.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='8' style='color:red;'>Error de conexión. Revisa la consola.</td></tr>";
         console.error(error);
       }
     }
 
-function renderTable() {
+    function renderTable() {
       const tbody = document.getElementById('data-body');
       tbody.innerHTML = '';
 
       if(currentData.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>No se encontraron registros.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No se encontraron registros.</td></tr>";
         return;
       }
 
       currentData.forEach((row, index) => {
         const tr = document.createElement('tr');
         
-        // 🚀 NUEVO: Lógica para decidir qué técnico mostrar
-        let nombrePrincipal = row["TECHNICIAN'S NAME"] || '';
-        let nombreOtro = row["Otro tecnico"] || '';
-        let displayTecnico = nombrePrincipal;
-
-        if (nombreOtro && !nombrePrincipal) {
-            displayTecnico = nombreOtro; // Muestra solo el otro si no hay principal
-        } else if (nombreOtro && nombrePrincipal) {
-            displayTecnico = `${nombrePrincipal} (${nombreOtro})`; // Muestra ambos si por error llenaron los dos
-        }
-
+        // 🚀 NUEVO: Muestra las dos columnas de técnicos separadas y legibles
         tr.innerHTML = `
           <td><button class="btn-edit" onclick="openModal(${index})">📝 Editar</button></td>
           <td>${row['DATE'] || ''}</td>
           <td>${row['WEEK'] || ''}</td>
-          <td><b>${displayTecnico}</b></td>
+          <td><b>${row["TECHNICIAN'S NAME"] || '-'}</b></td>
+          <td style="color: #ed1922;"><b>${row["Otro tecnico"] || '-'}</b></td>
           <td>${row['FARM CODE'] || ''}</td>
           <td>${row['ORCHARD CODE'] || ''}</td>
           <td>${row['FARM'] || ''}</td>
@@ -271,13 +258,17 @@ function renderTable() {
       priorityContainer.innerHTML = '';
       standardContainer.innerHTML = '';
 
-      const priorityKeys = ["FARM CODE", "ORCHARD CODE", "FIX FARM"];
+      // 🚀 NUEVO: Ponemos "Otro tecnico" arriba de todo para que sea fácil de editar
+      const priorityKeys = ["TECHNICIAN'S NAME", "Otro tecnico", "FARM CODE", "ORCHARD CODE", "FIX FARM"];
       
       priorityKeys.forEach(key => {
+        let listAttribute = "";
+        if (key === "TECHNICIAN'S NAME") listAttribute = 'list="list_technicians"';
+
         priorityContainer.innerHTML += `
           <div class="form-group">
             <label>${key}</label>
-            <input type="text" id="edit_${key}" value="${row[key] !== undefined ? row[key] : ''}">
+            <input type="text" id="edit_${key}" value="${row[key] !== undefined ? row[key] : ''}" ${listAttribute}>
           </div>
         `;
       });
@@ -286,8 +277,7 @@ function renderTable() {
         if (!priorityKeys.includes(key) && key !== "id_fila") {
           
           let listAttribute = "";
-          if (key === "TECHNICIAN'S NAME") listAttribute = 'list="list_technicians"';
-          else if (key === "SUPPLIER") listAttribute = 'list="list_suppliers"';
+          if (key === "SUPPLIER") listAttribute = 'list="list_suppliers"';
           else if (key === "FARM") listAttribute = 'list="list_farms"';
 
           standardContainer.innerHTML += `
