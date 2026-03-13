@@ -83,8 +83,8 @@
 
   <div class="filters">
     <div class="filter-group">
-      <label>Nombre (Finca/Prov):</label>
-      <input type="text" id="filter-name" placeholder="Ej: CARMITA">
+      <label>Técnico:</label>
+      <input type="text" id="filter-name" placeholder="Ej: JERRY ARREAGA" list="list_technicians">
     </div>
     <div class="filter-group">
       <label>Día (DATE):</label>
@@ -109,10 +109,10 @@
         <tr>
           <th>Acción</th>
           <th>DATE</th>
+          <th>WEEK</th>
+          <th>TÉCNICO</th>
           <th>FARM CODE</th>
           <th>ORCHARD CODE</th>
-          <th>WEEK</th>
-          <th>SUPPLIER</th>
           <th>FARM</th>
         </tr>
       </thead>
@@ -150,6 +150,7 @@
   </datalist>
 
   <script>
+    // URL DEL NUEVO SCRIPT DESPLEGADO
     const API_URL = "https://script.google.com/macros/s/AKfycbzXhPX7HyQJvnhvoJvQPglVhorLo9uto6SsVUobwCMXJNMcL7fWdcqWA3y2o8Or-_TW/exec"; 
     
     let currentData = [];
@@ -201,10 +202,10 @@
         tr.innerHTML = `
           <td><button class="btn-edit" onclick="openModal(${index})">📝 Editar</button></td>
           <td>${row['DATE'] || ''}</td>
-          <td><b>${row['FARM CODE'] || ''}</b></td>
-          <td><b>${row['ORCHARD CODE'] || ''}</b></td>
           <td>${row['WEEK'] || ''}</td>
-          <td>${row['SUPPLIER'] || ''}</td>
+          <td><b>${row["TECHNICIAN'S NAME"] || ''}</b></td>
+          <td>${row['FARM CODE'] || ''}</td>
+          <td>${row['ORCHARD CODE'] || ''}</td>
           <td>${row['FARM'] || ''}</td>
         `;
         tbody.appendChild(tr);
@@ -235,7 +236,6 @@
       Object.keys(row).forEach(key => {
         if (!priorityKeys.includes(key) && key !== "id_fila") {
           
-          // Magia del Autocompletado: Detectar los campos para ponerles la lista
           let listAttribute = "";
           if (key === "TECHNICIAN'S NAME") listAttribute = 'list="list_technicians"';
           else if (key === "SUPPLIER") listAttribute = 'list="list_suppliers"';
